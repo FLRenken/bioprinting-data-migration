@@ -3,8 +3,8 @@ import { Client, AuthenticationProvider } from "@microsoft/microsoft-graph-clien
 
 const msalConfig = {
   auth: {
-    clientId: "3adafcfc-d142-43d6-9281-ea1985504f68",
-    authority: "https://login.microsoftonline.com/d60c5d25-56f2-4940-9d64-9cb21b6bee16",
+    clientId: "",
+    authority: "",
   },
 };
 
