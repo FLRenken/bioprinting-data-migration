@@ -2,13 +2,16 @@
 
 Migration of OneNote bioprinting logs into an analyzable, queryable format.
 
-This project takes several years' worth of hand-written laboratory records — kept as
-tables inside a shared Microsoft OneNote notebook (`Printer4thGen`) — and turns them
+This project takes several years' worth of hand-written laboratory records - kept as
+tables inside a shared Microsoft OneNote notebook — and turns them
 into a normalized SQLite database that can be queried and statistically analyzed.
 
-It is a research/thesis project, not a packaged tool. The code is a **pipeline you walk
-through stage by stage**, and each stage leaves inspectable artifacts on disk before the
-next one picks them up. This document walks that path from end to end.
+It is a research/thesis project, not a packaged tool. The code is a pipeline you walk
+through stage by stage, and each stage leaves inspectable artifacts on disk before the
+next one picks them up. 
+
+This is an overview of the whole pipeline:
+![Pipeline-overview](BA_Diagram.png)
 
 ---
 
