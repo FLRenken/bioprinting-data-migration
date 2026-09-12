@@ -1,3 +1,4 @@
+
 # onenote-migration
 
 Migration of OneNote bioprinting logs into an analyzable, queryable format.
@@ -18,17 +19,14 @@ This is an overview of the whole pipeline:
 ## Table of contents
 
 1. [The problem](#1-the-problem)
-2. [The pipeline at a glance](#2-the-pipeline-at-a-glance)
-3. [Repository map](#3-repository-map)
-4. [Stage A — Acquisition (scraping OneNote)](#stage-a--acquisition-scraping-onenote)
-5. [Stage B1 — Structuring the raw tables](#stage-b1--structuring-the-raw-tables)
-6. [Stage B2–B5 — Cleaning into DataFrames](#stage-b2b5--cleaning-into-dataframes)
-7. [Stage C — Data storage (SQLite)](#stage-c--data-storage-sqlite)
-8. [Stage D — Analysis](#stage-d--analysis)
-9. [Running the pipeline](#running-the-pipeline)
-10. [Configuration files](#configuration-files)
-11. [Known issues and caveats](#known-issues-and-caveats)
-12. [Glossary](#glossary)
+2. [Repository Map](#2-repository-map)
+3. [Stage A — Acquisition (scraping OneNote)](#stage-a--acquisition-scraping-onenote)
+4. [Stage B1 — Structuring the raw tables](#stage-b1--structuring-the-raw-tables)
+5. [Stage B2–B5 — Cleaning into DataFrames](#stage-b2b5--cleaning-into-dataframes)
+6. [Stage C — Data storage (SQLite)](#stage-c--data-storage-sqlite)
+7. [Stage D — Analysis](#stage-d--analysis)
+8. [Known issues and caveats](#known-issues-and-caveats)
+9. [Glossary](#glossary)
 
 ---
 
@@ -65,60 +63,11 @@ The pipeline addresses these in order: **get the data out**, **give it a schema*
 
 ---
 
-## 2. The pipeline at a glance
-
-```
-  OneNote (Printer4thGen)
-          │
-          │  A. Acquisition — Selenium + Chrome
-          │     scrape/getLogNames.js   → sourceLogs.json   (358 page names)
-          │     scrape/main.js          → login → iterate pages → readLog
-          ▼
-  scrape/table-data/<page name>/tableData_<n>.json      ~1,690 raw table dumps
-          │                                              across 292 log folders
-          │  B1. Structuring — cleaning_storage/structureTables.js
-          │      classify each table, reshape, attach a log id
-          ▼
-  cleaning_storage/table-data-cleaned/<page name>/<tableType>.json
-          │
-          │  B2. Aggregate — cleaning_storage/cleanDataframe.ipynb
-          ▼
-  cleaning_storage/data-frames-raw/*.csv                 one CSV per table type
-          │
-          │  B3. Clean columns   (merge duplicates, drop empties, lowercase)
-          │  B4. Clean rows      (drop empties, map vocabulary via mappings.json)
-          │  B5. Convert types   (numeric coercion, operator arrays)
-          ▼
-  cleaning_storage/data-frames-cleaned/*.csv
-          │
-          │  C. Storage — same notebook, final cells
-          ▼
-  analysis/bioprinting.db          SQLite, 5 tables
-          │
-          │  D. Analysis — analysis/analysis.ipynb
-          ▼
-  analysis/plots/*.png
-```
-
-Only the **first** and **last** artifacts are committed. Everything in between is
-listed in `.gitignore` and is expected to be regenerated:
-
-```
-credentials.json
-cleaning_storage/data-frames-raw
-cleaning_storage/data-frames-cleaned
-cleaning_storage/table-data-cleaned
-scrape/table-data
-```
-
----
-
-## 3. Repository map
+## 2. Repository map
 
 ```
 onenote-migration/
 ├── parameters.json           Run configuration (notebook name, Selenium timeout)
-├── oneNoteApi.ts             Abandoned Microsoft Graph API approach — see Stage A
 │
 ├── scrape/                   STAGE A — get the tables out of OneNote
 │   ├── main.js               Orchestrator: login, then read every page in sourceLogs
@@ -143,18 +92,15 @@ onenote-migration/
 
 ---
 
-## Stage A — Acquisition (scraping OneNote)
+## 3. Stage A — Acquisition (scraping OneNote)
 
 ### Why scraping and not the API
 
-`oneNoteApi.ts` is the first attempt: MSAL browser auth against Microsoft Graph, asking
-for the `Notes.Read` / `Notes.ReadWrite` scopes. It is **an unfinished stub** — the
-`clientId` and `authority` are empty strings and the file stops at the comment
-`// Create a Graph client instance`. The approach was dropped (tenant app registration
-was not available) in favour of browser automation. The file is kept as a record of
-the route not taken; nothing in the pipeline imports it.
+At first glance the easiest approach seems to be to just send a request to Microsoft Graph, asking
+for the `Notes.Read` / `Notes.ReadWrite` scopes. I tried this out, but this is an unfinished stub, therefore I deleted it. The approach was dropped (tenant app registration
+was not available) in favour of browser automation.
 
-The working approach is **Selenium WebDriver driving a real Chrome session** against
+The working approach is Selenium WebDriver driving a real Chrome session against
 the OneNote web client.
 
 ### The four scripts
@@ -188,7 +134,8 @@ with an 8-second pause between pages.
 
 The generous sleeps are deliberate: OneNote's web client renders lazily and there is no
 reliable "page loaded" signal to wait on. They also mean a full scrape of 358 pages
-takes roughly an hour, and the browser window must be left alone while it runs.
+takes roughly an hour, and the browser window must be left alone while it runs. 
+This can be optimized for sure.
 
 **`sample.py`** — unrelated to the scrape itself. It draws a random 10% sample
 (without replacement) of the page names in `sourceLogs.json` and prints them, so a
@@ -205,7 +152,7 @@ what each file actually is, is the job of the next stage.
 
 ---
 
-## Stage B1 — Structuring the raw tables
+## 4. Stage B1 — Structuring the raw tables
 
 `cleaning_storage/structureTables.js` walks every log folder and every JSON file in it,
 and classifies each table **by looking for a signature column**:
@@ -245,12 +192,11 @@ where a table was missing or unrecognized.
 
 ---
 
-## Stage B2–B5 — Cleaning into DataFrames
+## 5. Stage B2–B5 — Cleaning into DataFrames
 
 All of this lives in **`cleaning_storage/cleanDataframe.ipynb`**, which is written as a
 narrative: each markdown cell states what is wrong with the data and why, and the
-following code cell fixes it. Read it top to bottom — the cells are stateful and depend
-on each other.
+following code cell fixes it.
 
 ### B2 — JSON to DataFrames
 
@@ -354,7 +300,7 @@ Two properties worth knowing before extending it:
 
 ---
 
-## Stage C — Data storage (SQLite)
+## 6. Stage C — Data storage (SQLite)
 
 The final cells of `cleanDataframe.ipynb` reshape the five surviving DataFrames into a
 relational schema and write `analysis/bioprinting.db`.
@@ -382,18 +328,9 @@ Two restructurings happen first:
 `operators`, as `logid` in `slotSettings` and `bioInks`, and as `logId` in
 `printingLog`. There are no declared foreign keys; the relationships are by convention.
 
-> **Note on naming.** `overview`, `operators`, `slotSettings` and `bioInks` went through
-> the lowercase-and-strip normalization. `printingLog` did not — its columns still carry
-> spaces, brackets, a micro sign, and in one case a non-breaking space
-> (`texp.bottom\xa0 [s]`). Quote those identifiers in SQL, and prefer copy-paste over
-> retyping them.
-
-A closing cell verifies the database with a smoke-test query — the share of print
-attempts that succeeded, failed, or ended in some other state.
-
 ---
 
-## Stage D — Analysis
+## 7. Stage D — Analysis
 
 `analysis/analysis.ipynb` connects to `bioprinting.db` and runs two analyses.
 
@@ -418,101 +355,9 @@ and wash time (`slotSettings.washTime`), joined on `logId`, with a significance 
 α = 0.05. Spearman rather than Pearson because the relationship is not assumed linear
 and the data are not normally distributed.
 
-The notebook ends with a list of open research questions (in German) — association rule
-mining over the non-numeric fields, and a reliability assessment of the migration itself
-by re-creating OneNote pages and checking how faithfully the scraper reproduces them.
-
 ---
 
-## Running the pipeline
-
-### Prerequisites
-
-- **Node.js** with `selenium-webdriver`, `chromedriver`, `he`, `html-table-to-json`
-- **Google Chrome**, matching the installed `chromedriver`
-- **Python 3** with `pandas`, `numpy`, `matplotlib`, `scipy`, and Jupyter
-- Access to the OneNote notebook named in `parameters.json`
-
-There is no `package.json` or `requirements.txt` in the repository; dependencies are
-installed manually.
-
-### Step 1 — Credentials
-
-Create `credentials.json` in the repository root. It is gitignored and must stay that
-way:
-
-```json
-{
-  "username": "you@example.com",
-  "password": "..."
-}
-```
-
-### Step 2 — Discover the page list
-
-From `scrape/`, run `getLogNames.js` against a logged-in session to regenerate
-`sourceLogs.json`. Skip this if the committed list is still current.
-
-### Step 3 — Scrape
-
-```bash
-cd scrape
-node main.js
-```
-
-A Chrome window opens and drives itself. **Do not interact with it.** Expect roughly an
-hour for the full notebook. Output accumulates under `scrape/table-data/`.
-
-Optionally run `sample.py` afterwards to get a 10% sample of page names for manual
-spot-checking against OneNote.
-
-### Step 4 — Structure (B1)
-
-```bash
-node structureTables.js
-```
-
-Check `parentFolder` at the top of the file first — see *Known issues*. Output lands in
-`table-data-cleaned/`.
-
-Optionally run `countTables.py` to see how many tables each log ended up with.
-
-### Step 5 — Clean and store (B2–B5, C)
-
-Open `cleaning_storage/cleanDataframe.ipynb` and run the cells in order. Create the
-output directories `data-frames-raw/` and `data-frames-cleaned/` first — the notebook
-writes into them but does not create them. The final cells write
-`analysis/bioprinting.db`.
-
-### Step 6 — Analyze
-
-Open `analysis/analysis.ipynb` and run it. It only needs `bioprinting.db`, which is
-committed — so this step works without re-running anything above it.
-
----
-
-## Configuration files
-
-**`parameters.json`**
-
-```json
-{
-  "timeout": 2000,
-  "notebook_name": "Printer4thGen"
-}
-```
-
-`timeout` is the delay in milliseconds between the e-mail and password steps of the
-sign-in flow. `notebook_name` must match the OneNote notebook's
-`data-notebook-name` attribute exactly.
-
-**`credentials.json`** — `username` and `password`, gitignored, created by hand.
-
-**`mappings.json`** — the controlled vocabulary; see Stage B4.
-
----
-
-## Known issues and caveats
+## 8. Known issues and caveats
 
 These are worth knowing before re-running or extending the pipeline.
 
@@ -554,12 +399,6 @@ These are worth knowing before re-running or extending the pipeline.
 - `printerSetup` is extracted and then dropped. If `.stl` references become relevant,
   the data is still in `table-data-cleaned/`.
 
-**Security**
-
-- `credentials.json` holds a plaintext account password. It is gitignored, but check
-  that it has never been committed before publishing the repository, and prefer a
-  dedicated account with access to only this notebook.
-
 **Fragility of the scrape as a whole**
 
 The scraper depends on OneNote's DOM: generated CSS class names such as
@@ -570,7 +409,7 @@ suspect the selectors first.
 
 ---
 
-## Glossary
+## 9. Glossary
 
 | Term | Meaning |
 |---|---|
