@@ -1,15 +1,11 @@
 
 # Bioprinting Data Processing Pipeline
 
-Migration of OneNote bioprinting logs into an analyzable, queryable format.
+This is a data-engineering and methodological research project enabling exploratory analysis of historical bioprinting experiments. By extracting, cleaning, and normalizing experimental data from Microsoft OneNote into a relational SQLite database, the pipeline addresses inconsistencies in data formats, terminology, and missing values. This makes it possible to investigate patterns in bioprinting parameters and explore relationships between experimental variables, such as photoinitiator concentration and washing time.
 
-This project takes several years' worth of hand-written laboratory records - kept as
-tables inside a shared Microsoft OneNote notebook — and turns them
-into a normalized SQLite database that can be queried and statistically analyzed.
+It is a research/thesis project, not a packaged tool. The code is a pipeline you walk through stage by stage, and each stage leaves inspectable artifacts on disk before the next one picks them up. 
 
-It is a research/thesis project, not a packaged tool. The code is a pipeline you walk
-through stage by stage, and each stage leaves inspectable artifacts on disk before the
-next one picks them up. 
+(Disclaimer: ReadMe partly AI generated)
 
 This is an overview of the whole pipeline:
 ![Pipeline-overview](BA_Diagram.png)
